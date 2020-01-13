@@ -4,9 +4,11 @@
 #include <stdint.h>
 #include <dlfcn.h>
 
+#include <array>
+
 #include <cstdio>
 
-static Mouse3DController* mouse_3d_controller = NULL;
+static Slic3r::GUI::Mouse3DController* mouse_3d_controller = NULL;
 
 static uint16_t clientID = 0;
 
@@ -146,7 +148,7 @@ static void unload_driver()
 static void DeviceAdded(uint32_t unused)
 {
 #if ENABLE_3DCONNEXION_DEVICES_DEBUG_OUTPUT
-  printf("ndof: device added\n");
+  printf("device added\n");
 #endif
 
   // determine exactly which device is plugged in
@@ -170,9 +172,10 @@ static void DeviceRemoved(uint32_t unused)
 
 static void DeviceEvent(uint32_t unused, uint32_t msg_type, void *msg_arg)
 {
-  std::cout<<std::endl<<"DEVICE EVENT"<<std::endl<<std::endl;
+  std::cout<<"DEVICE EVENT"<<std::endl;
   
-  if (msg_type == kConnexionMsgDeviceState) {
+  //if (msg_type == kConnexionMsgDeviceState) {
+  if(msg_type != 862212163){
     ConnexionDeviceState *s = (ConnexionDeviceState *)msg_arg;
 
     // device state is broadcast to all clients; only react if sent to us
@@ -182,33 +185,18 @@ static void DeviceEvent(uint32_t unused, uint32_t msg_type, void *msg_arg)
 
       switch (s->command) {
         case kConnexionCmdHandleAxis: {
-          //update translation and rotation here
+            
+           std::array<unsigned char, 13> dataPacket = {{(unsigned char)0,
+           (unsigned char)(s->axis[0] & 0xFFFF) , (unsigned char)(s->axis[0] & 0xFFFF0000),
+           (unsigned char)(s->axis[1] & 0xFFFF) , (unsigned char)(s->axis[1] & 0xFFFF0000),
+           (unsigned char)(s->axis[2] & 0xFFFF) , (unsigned char)(s->axis[2] & 0xFFFF0000),
+           (unsigned char)(s->axis[3] & 0xFFFF) , (unsigned char)(s->axis[3] & 0xFFFF0000),
+           (unsigned char)(s->axis[4] & 0xFFFF) , (unsigned char)(s->axis[4] & 0xFFFF0000),
+           (unsigned char)(s->axis[5] & 0xFFFF) , (unsigned char)(s->axis[5] & 0xFFFF0000)}};
 
-          //int16_t axis[6];    // tx, ty, tz, rx, ry, rz
-
-          //Vec3d translation(-convert_input(packet[1], packet[2], deadzone),
-          //  convert_input(packet[3], packet[4], deadzone),
-          //  convert_input(packet[5], packet[6], deadzone));
-
-          //Vec3f rotation(-(float)convert_input(packet[first_byte + 0], packet[first_byte + 1], deadzone),
-          //  (float)convert_input(packet[first_byte + 2], packet[first_byte + 3], deadzone),
-          //  -(float)convert_input(packet[first_byte + 4], packet[first_byte + 5], deadzone));
-
-
-          //packet[1] a packet[2] daji dohromady tx. packet[2] je vyssi (<<8)
-
-
-          // convert to blender view coordinates
-
-          std::array<unsigned char, 13> dataPacket = {0,
-           s->axis[0] & 0xFFFF , s->axis[0] & 0xFFFF0000, 
-           s->axis[1] & 0xFFFF , s->axis[1] & 0xFFFF0000, 
-           s->axis[2] & 0xFFFF , s->axis[2] & 0xFFFF0000, 
-           s->axis[3] & 0xFFFF , s->axis[3] & 0xFFFF0000, 
-           s->axis[4] & 0xFFFF , s->axis[4] & 0xFFFF0000, 
-           s->axis[5] & 0xFFFF , s->axis[5] & 0xFFFF0000, 
-           s->axis[6] & 0xFFFF , s->axis[6] & 0xFFFF0000};
-
+            
+           
+            
            mouse_3d_controller->handle_packet_translation(dataPacket);
            mouse_3d_controller->handle_packet_rotation(dataPacket,7);
 
@@ -220,7 +208,7 @@ static void DeviceEvent(uint32_t unused, uint32_t msg_type, void *msg_arg)
         case kConnexionCmdAppSpecific:
           break;
         default:
-          breakl
+        break;
       }
     //}
   }
@@ -229,7 +217,7 @@ static void DeviceEvent(uint32_t unused, uint32_t msg_type, void *msg_arg)
 
 namespace Slic3r {
 namespace GUI {
-Mouse3DHandlerMac::Mouse3DHandlerMac(const Mouse3DController* controller)
+Mouse3DHandlerMac::Mouse3DHandlerMac(Mouse3DController* controller)
 {
   if (load_driver_functions()) {
     mouse_3d_controller = controller;
@@ -257,13 +245,14 @@ Mouse3DHandlerMac::Mouse3DHandlerMac(const Mouse3DController* controller)
   }
 }
 
-GMouse3DHandlerMac::~Mouse3DHandlerMac()
+Mouse3DHandlerMac::~Mouse3DHandlerMac()
 {
   if (driver_loaded) {
     UnregisterConnexionClient(clientID);
     CleanupConnexionHandlers();
     unload_driver();
   }
+  mouse_3d_controller = nullptr;
 }
 
 bool Mouse3DHandlerMac::available()

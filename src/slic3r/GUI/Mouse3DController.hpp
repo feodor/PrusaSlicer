@@ -14,13 +14,15 @@
 #include <vector>
 #include <chrono>
 
-#if __APPLE__
-class Mouse3DHandlerMac;
-#endif//__APPLE__
+
 
 namespace Slic3r {
 namespace GUI {
 
+#if __APPLE__
+    class Mouse3DHandlerMac;
+#endif//__APPLE__
+    
 struct Camera;
 #if ENABLE_3DCONNEXION_DEVICES_CLOSE_SETTING_DIALOG
 class GLCanvas3D;
@@ -203,7 +205,7 @@ private:
 #if __APPLE__
 class Mouse3DHandlerMac{
  public:
-  Mouse3DHandlerMac(const Mouse3DController* controller);
+  Mouse3DHandlerMac(Mouse3DController* controller);
   ~Mouse3DHandlerMac();
 
   bool available();
