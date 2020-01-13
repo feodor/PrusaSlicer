@@ -17,6 +17,8 @@
 
 #include <bitset>
 
+#include <spnav.h>
+
 // WARN: If updating these lists, please also update resources/udev/90-3dconnexion.rules
 
 static const std::vector<int> _3DCONNEXION_VENDORS =
@@ -203,6 +205,9 @@ Mouse3DController::Mouse3DController()
 #if ENABLE_3DCONNEXION_DEVICES_CLOSE_SETTING_DIALOG
     , m_settings_dialog_closed_by_user(false)
 #endif // ENABLE_3DCONNEXION_DEVICES_CLOSE_SETTING_DIALOG
+#if __APPLE__
+    ,m_handler_mac(new Mouse3DHandlerMac())
+#endif //__APPLE__
 {
     m_last_time = std::chrono::high_resolution_clock::now();
 }

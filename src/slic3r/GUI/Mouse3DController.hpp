@@ -14,6 +14,10 @@
 #include <vector>
 #include <chrono>
 
+#if __APPLE__
+class Mouse3DHandlerMac;
+#endif//__APPLE__
+
 namespace Slic3r {
 namespace GUI {
 
@@ -189,10 +193,25 @@ private:
     bool handle_packet_translation(const DataPacket& packet);
     bool handle_packet_rotation(const DataPacket& packet, unsigned int first_byte);
     bool handle_packet_button(const DataPacket& packet, unsigned int packet_size);
+
+#if __APPLE__
+    Mouse3DHandlerMac* m_handler_mac;
+#endif//__APPLE__
 };
+
+#if __APPLE__
+class Mouse3DHandlerMac{
+ public:
+  Mouse3DHandlerMac();
+  ~Mouse3DHandlerMac();
+
+  bool available();
+};
+#endif//__APPLE__
 
 } // namespace GUI
 } // namespace Slic3r
+
 
 #endif // slic3r_Mouse3DController_hpp_
 
