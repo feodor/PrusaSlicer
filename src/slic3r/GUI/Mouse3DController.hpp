@@ -177,6 +177,9 @@ public:
     void render_settings_dialog(unsigned int canvas_width, unsigned int canvas_height) const;
 #endif // ENABLE_3DCONNEXION_DEVICES_CLOSE_SETTING_DIALOG
 
+    typedef std::array<unsigned char, 13> DataPacket;
+    bool handle_packet_translation(const DataPacket& packet);
+    bool handle_packet_rotation(const DataPacket& packet, unsigned int first_byte);
 private:
     bool connect_device();
     void disconnect_device();
@@ -186,12 +189,10 @@ private:
     // secondary thread methods
     void run();
     void collect_input();
-
-    typedef std::array<unsigned char, 13> DataPacket;
     bool handle_packet(const DataPacket& packet);
     bool handle_wireless_packet(const DataPacket& packet);
-    bool handle_packet_translation(const DataPacket& packet);
-    bool handle_packet_rotation(const DataPacket& packet, unsigned int first_byte);
+    //bool handle_packet_translation(const DataPacket& packet);
+    //bool handle_packet_rotation(const DataPacket& packet, unsigned int first_byte);
     bool handle_packet_button(const DataPacket& packet, unsigned int packet_size);
 
 #if __APPLE__
@@ -202,7 +203,7 @@ private:
 #if __APPLE__
 class Mouse3DHandlerMac{
  public:
-  Mouse3DHandlerMac();
+  Mouse3DHandlerMac(const Mouse3DController* controller);
   ~Mouse3DHandlerMac();
 
   bool available();

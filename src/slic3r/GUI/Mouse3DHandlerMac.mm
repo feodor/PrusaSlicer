@@ -6,6 +6,8 @@
 
 #include <cstdio>
 
+static Mouse3DController* mouse_3d_controller = NULL;
+
 static uint16_t clientID = 0;
 
 static bool driver_loaded = false;
@@ -153,6 +155,9 @@ static void DeviceAdded(uint32_t unused)
   int16_t vendorID = result >> 16;
   int16_t productID = result & 0xffff;
 
+  //TODO: verify device
+
+
   //ndof_manager->setDevice(vendorID, productID);
 }
 
@@ -166,56 +171,68 @@ static void DeviceRemoved(uint32_t unused)
 static void DeviceEvent(uint32_t unused, uint32_t msg_type, void *msg_arg)
 {
   std::cout<<std::endl<<"DEVICE EVENT"<<std::endl<<std::endl;
-  /*
+  
   if (msg_type == kConnexionMsgDeviceState) {
     ConnexionDeviceState *s = (ConnexionDeviceState *)msg_arg;
 
     // device state is broadcast to all clients; only react if sent to us
-    if (s->client == clientID) {
+    //if (s->client == clientID) {
       // TODO: is s->time compatible with GHOST timestamps? if so use that instead.
-      GHOST_TUns64 now = ghost_system->getMilliSeconds();
+      //GHOST_TUns64 now = ghost_system->getMilliSeconds();
 
       switch (s->command) {
         case kConnexionCmdHandleAxis: {
+          //update translation and rotation here
+
+          //int16_t axis[6];    // tx, ty, tz, rx, ry, rz
+
+          //Vec3d translation(-convert_input(packet[1], packet[2], deadzone),
+          //  convert_input(packet[3], packet[4], deadzone),
+          //  convert_input(packet[5], packet[6], deadzone));
+
+          //Vec3f rotation(-(float)convert_input(packet[first_byte + 0], packet[first_byte + 1], deadzone),
+          //  (float)convert_input(packet[first_byte + 2], packet[first_byte + 3], deadzone),
+          //  -(float)convert_input(packet[first_byte + 4], packet[first_byte + 5], deadzone));
+
+
+          //packet[1] a packet[2] daji dohromady tx. packet[2] je vyssi (<<8)
+
+
           // convert to blender view coordinates
-          const int t[3] = {s->axis[0], -(s->axis[2]), s->axis[1]};
-          const int r[3] = {-(s->axis[3]), s->axis[5], -(s->axis[4])};
 
-          ndof_manager->updateTranslation(t, now);
-          ndof_manager->updateRotation(r, now);
+          std::array<unsigned char, 13> dataPacket = {0,
+           s->axis[0] & 0xFFFF , s->axis[0] & 0xFFFF0000, 
+           s->axis[1] & 0xFFFF , s->axis[1] & 0xFFFF0000, 
+           s->axis[2] & 0xFFFF , s->axis[2] & 0xFFFF0000, 
+           s->axis[3] & 0xFFFF , s->axis[3] & 0xFFFF0000, 
+           s->axis[4] & 0xFFFF , s->axis[4] & 0xFFFF0000, 
+           s->axis[5] & 0xFFFF , s->axis[5] & 0xFFFF0000, 
+           s->axis[6] & 0xFFFF , s->axis[6] & 0xFFFF0000};
 
-          ghost_system->notifyExternalEventProcessed();
+           mouse_3d_controller->handle_packet_translation(dataPacket);
+           mouse_3d_controller->handle_packet_rotation(dataPacket,7);
+
+          
           break;
         }
-        case kConnexionCmdHandleButtons: {
-          int button_bits = has_old_driver ? s->buttons8 : s->buttons;
-#ifdef DEBUG_NDOF_BUTTONS
-          printf("button bits: 0x%08x\n", button_bits);
-#endif
-          ndof_manager->updateButtons(button_bits, now);
-          ghost_system->notifyExternalEventProcessed();
-          break;
-        }
-#if DEBUG_NDOF_DRIVER
+        case kConnexionCmdHandleButtons:
+        break;
         case kConnexionCmdAppSpecific:
-          printf("ndof: app-specific command, param = %hd, value = %d\n", s->param, s->value);
           break;
-
         default:
-          printf("ndof: mystery device command %d\n", s->command);
-#endif
+          breakl
       }
-    }
+    //}
   }
-  */
+  
 }
 
 namespace Slic3r {
 namespace GUI {
-Mouse3DHandlerMac::Mouse3DHandlerMac()
+Mouse3DHandlerMac::Mouse3DHandlerMac(const Mouse3DController* controller)
 {
   if (load_driver_functions()) {
-    //ndof_manager = this;
+    mouse_3d_controller = controller;
 
     uint16_t error;
     if (has_new_driver) {
@@ -232,7 +249,7 @@ Mouse3DHandlerMac::Mouse3DHandlerMac()
 
     // Pascal string *and* a four-letter constant. How old-skool.
     clientID = RegisterConnexionClient(
-        'blnd', "\007blender", kConnexionClientModeTakeOver, kConnexionMaskAll);
+        'prss', "\007prusaslicer", kConnexionClientModeTakeOver, kConnexionMaskAll);
 
     if (!has_old_driver) {
       SetConnexionClientButtonMask(clientID, kConnexionMaskAllButtons);

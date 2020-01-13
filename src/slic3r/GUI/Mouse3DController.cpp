@@ -17,7 +17,8 @@
 
 #include <bitset>
 
-#include <spnav.h>
+//unofficial linux lib
+//#include <spnav.h>
 
 // WARN: If updating these lists, please also update resources/udev/90-3dconnexion.rules
 
@@ -206,7 +207,7 @@ Mouse3DController::Mouse3DController()
     , m_settings_dialog_closed_by_user(false)
 #endif // ENABLE_3DCONNEXION_DEVICES_CLOSE_SETTING_DIALOG
 #if __APPLE__
-    ,m_handler_mac(new Mouse3DHandlerMac())
+    ,m_handler_mac(new Mouse3DHandlerMac(this))
 #endif //__APPLE__
 {
     m_last_time = std::chrono::high_resolution_clock::now();
@@ -418,6 +419,9 @@ void Mouse3DController::render_settings_dialog(unsigned int canvas_width, unsign
 
 bool Mouse3DController::connect_device()
 {
+#ifdef __APPLE__
+    return false;
+#endif//__APPLE__
     static const long long DETECTION_TIME_MS = 2000; // two seconds
 
     if (is_device_connected())
