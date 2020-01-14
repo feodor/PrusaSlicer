@@ -180,8 +180,8 @@ public:
 #endif // ENABLE_3DCONNEXION_DEVICES_CLOSE_SETTING_DIALOG
 
     typedef std::array<unsigned char, 13> DataPacket;
-    bool handle_packet_translation(const DataPacket& packet);
-    bool handle_packet_rotation(const DataPacket& packet, unsigned int first_byte);
+    
+    void handle_input(const DataPacket& packet, const int packet_lenght);
 private:
     bool connect_device();
     void disconnect_device();
@@ -193,8 +193,8 @@ private:
     void collect_input();
     bool handle_packet(const DataPacket& packet);
     bool handle_wireless_packet(const DataPacket& packet);
-    //bool handle_packet_translation(const DataPacket& packet);
-    //bool handle_packet_rotation(const DataPacket& packet, unsigned int first_byte);
+    bool handle_packet_translation(const DataPacket& packet);
+    bool handle_packet_rotation(const DataPacket& packet, unsigned int first_byte);
     bool handle_packet_button(const DataPacket& packet, unsigned int packet_size);
 
 #if __APPLE__

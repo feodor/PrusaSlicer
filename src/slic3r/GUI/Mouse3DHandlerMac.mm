@@ -149,7 +149,7 @@ static void unload_driver()
 static void DeviceAdded(uint32_t unused)
 {
 #if ENABLE_3DCONNEXION_DEVICES_DEBUG_OUTPUT
-  printf("3d device added\n");
+    std::cout<<"3D device added"<<std::endl;
 #endif
 
   // determine exactly which device is plugged in
@@ -197,14 +197,13 @@ static void DeviceEvent(uint32_t unused, uint32_t msg_type, void *msg_arg)
 
             for (int i = 0; i < 6; i++) {
                 //std::cout<<i<<":"<<std::hex<<dataPacket[i]<<", ";
-                //std::cout<<i<<":"<<s->axis[i]<<", ";
-                printf("0x%.8X ",s->axis[i]);
+                std::cout<<i<<":"<<s->axis[i]<<", ";
+                //printf("0x%.8X ",s->axis[i]);
             }
             std::cout<<std::endl;
            
             
-           mouse_3d_controller->handle_packet_translation(dataPacket);
-           mouse_3d_controller->handle_packet_rotation(dataPacket,7);
+           mouse_3d_controller->handle_input(dataPacket, 13);
 
           
           break;

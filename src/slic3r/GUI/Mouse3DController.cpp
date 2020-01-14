@@ -754,10 +754,13 @@ void Mouse3DController::collect_input()
         stop();
         return;
     }
-
+}
+void Mouse3DController::handle_input(const DataPacket& packet, const int packet_lenght)
+{
     if (!wxGetApp().IsActive())
         return;
 
+    int res = packet_lenght;
     bool updated = false;
 
     if (res == 7)
