@@ -21,6 +21,7 @@ static bool has_new_driver =
 // replicate just enough of the 3Dx API for our uses, not everything the driver provides
 
 #define kConnexionClientModeTakeOver 1
+#define kConnexionMaskAxis 0x3f00
 #define kConnexionMaskAll 0x3fff
 #define kConnexionMaskAllButtons 0xffffffff
 #define kConnexionCmdHandleButtons 2
@@ -81,7 +82,7 @@ static void *load_func(void *module, const char *func_name)
 
 #if ENABLE_3DCONNEXION_DEVICES_DEBUG_OUTPUT
   if (func) {
-    printf("'%s' loaded :D\n", func_name);
+    printf("'%s' loaded\n", func_name);
   }
   else {
     printf("<!> %s\n", dlerror());
@@ -148,7 +149,7 @@ static void unload_driver()
 static void DeviceAdded(uint32_t unused)
 {
 #if ENABLE_3DCONNEXION_DEVICES_DEBUG_OUTPUT
-  printf("device added\n");
+  printf("3d device added\n");
 #endif
 
   // determine exactly which device is plugged in
@@ -166,16 +167,16 @@ static void DeviceAdded(uint32_t unused)
 static void DeviceRemoved(uint32_t unused)
 {
 #if ENABLE_3DCONNEXION_DEVICES_DEBUG_OUTPUT
-  printf("ndof: device removed\n");
+  printf("3d device removed\n");
 #endif
 }
 
 static void DeviceEvent(uint32_t unused, uint32_t msg_type, void *msg_arg)
 {
-  std::cout<<"DEVICE EVENT"<<std::endl;
+  //std::cout<<"DEVICE EVENT"<<std::endl;
   
-  //if (msg_type == kConnexionMsgDeviceState) {
-  if(msg_type != 862212163){
+  if (msg_type == kConnexionMsgDeviceState) {
+  //if(msg_type != 862212163){
     ConnexionDeviceState *s = (ConnexionDeviceState *)msg_arg;
 
     // device state is broadcast to all clients; only react if sent to us
@@ -194,7 +195,12 @@ static void DeviceEvent(uint32_t unused, uint32_t msg_type, void *msg_arg)
            (unsigned char)(s->axis[4] & 0xFFFF) , (unsigned char)(s->axis[4] & 0xFFFF0000),
            (unsigned char)(s->axis[5] & 0xFFFF) , (unsigned char)(s->axis[5] & 0xFFFF0000)}};
 
-            
+            for (int i = 0; i < 6; i++) {
+                //std::cout<<i<<":"<<std::hex<<dataPacket[i]<<", ";
+                //std::cout<<i<<":"<<s->axis[i]<<", ";
+                printf("0x%.8X ",s->axis[i]);
+            }
+            std::cout<<std::endl;
            
             
            mouse_3d_controller->handle_packet_translation(dataPacket);
@@ -237,11 +243,11 @@ Mouse3DHandlerMac::Mouse3DHandlerMac(Mouse3DController* controller)
 
     // Pascal string *and* a four-letter constant. How old-skool.
     clientID = RegisterConnexionClient(
-        'prss', "\007prusaslicer", kConnexionClientModeTakeOver, kConnexionMaskAll);
+        0, "\011PrusaSlicer", kConnexionClientModeTakeOver, kConnexionMaskAxis);
 
-    if (!has_old_driver) {
-      SetConnexionClientButtonMask(clientID, kConnexionMaskAllButtons);
-    }
+    //if (!has_old_driver) {
+    //  SetConnexionClientButtonMask(clientID, kConnexionMaskAllButtons);
+    //}
   }
 }
 
