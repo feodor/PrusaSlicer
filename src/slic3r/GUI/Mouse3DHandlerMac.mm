@@ -176,7 +176,7 @@ static void DeviceRemoved(uint32_t unused)
 static void DeviceEvent(uint32_t unused, uint32_t msg_type, void *msg_arg)
 {
   //std::cout<<"DEVICE EVENT"<<std::endl;
-  BOOST_LOG_TRIVIAL(error)<<"3dx device event";
+  //BOOST_LOG_TRIVIAL(error)<<"3dx device event";
   if (msg_type == kConnexionMsgDeviceState) {
   //if(msg_type != 862212163){
     ConnexionDeviceState *s = (ConnexionDeviceState *)msg_arg;
@@ -188,20 +188,23 @@ static void DeviceEvent(uint32_t unused, uint32_t msg_type, void *msg_arg)
 
       switch (s->command) {
         case kConnexionCmdHandleAxis: {
-            
+            /*
+             The axis field is an array of 6 signed 16-bit integers corresponding to the 6 device axes. Data is ordered as Tx, Tz, Ty, Rx, Rz, Ry. The values reported are scaled by the driver according to the speed slider settings on the 3Dconnexion preference panel. At maximum speed, the range is - 1024 to 1024. Typical range that you should optimize your application for should be -500 to 500.
+             */
            std::array<unsigned char, 13> dataPacket = {{(unsigned char)1,
-           (unsigned char)(s->axis[0] & 0xFFFF) , (unsigned char)(s->axis[0] & 0xFFFF0000),
-           (unsigned char)(s->axis[1] & 0xFFFF) , (unsigned char)(s->axis[1] & 0xFFFF0000),
-           (unsigned char)(s->axis[2] & 0xFFFF) , (unsigned char)(s->axis[2] & 0xFFFF0000),
-           (unsigned char)(s->axis[3] & 0xFFFF) , (unsigned char)(s->axis[3] & 0xFFFF0000),
-           (unsigned char)(s->axis[4] & 0xFFFF) , (unsigned char)(s->axis[4] & 0xFFFF0000),
-           (unsigned char)(s->axis[5] & 0xFFFF) , (unsigned char)(s->axis[5] & 0xFFFF0000)}};
+           (unsigned char)(s->axis[0] & 0xFF) , (unsigned char)(s->axis[0] & 0xFF00),
+           (unsigned char)(s->axis[1] & 0xFF) , (unsigned char)(s->axis[1] & 0xFF00),
+           (unsigned char)(s->axis[2] & 0xFF) , (unsigned char)(s->axis[2] & 0xFF00),
+           (unsigned char)(s->axis[3] & 0xFF) , (unsigned char)(s->axis[3] & 0xFF00),
+           (unsigned char)(s->axis[4] & 0xFF) , (unsigned char)(s->axis[4] & 0xFF00),
+           (unsigned char)(s->axis[5] & 0xFF) , (unsigned char)(s->axis[5] & 0xFF00)}};
 
+            
             for (int i = 0; i < 6; i++) {
                 //std::cout<<i<<":"<<std::hex<<dataPacket[i]<<", ";
                 //std::cout<<i<<":"<<s->axis[i]<<", ";
-                BOOST_LOG_TRIVIAL(error)<<i<<":"<<s->axis[i];
-                //printf("0x%.8X ",s->axis[i]);
+                //BOOST_LOG_TRIVIAL(error)<<i<<":"<<s->axis[i];
+                printf("0x%.8X ",s->axis[i]);
             }
             std::cout<<std::endl;
            
@@ -245,7 +248,7 @@ Mouse3DHandlerMac::Mouse3DHandlerMac(Mouse3DController* controller)
 
     // Pascal string *and* a four-letter constant. How old-skool.
     clientID = RegisterConnexionClient(
-        0, "\011PrusaSlicer", kConnexionClientModeTakeOver, kConnexionMaskAxis);
+        0, "\013PrusaSlicer", kConnexionClientModeTakeOver, kConnexionMaskAxis);
 
     //if (!has_old_driver) {
     //  SetConnexionClientButtonMask(clientID, kConnexionMaskAllButtons);

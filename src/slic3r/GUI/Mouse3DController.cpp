@@ -876,6 +876,13 @@ double convert_input(unsigned char first, unsigned char second, double deadzone)
 
 bool Mouse3DController::handle_packet_translation(const DataPacket& packet)
 {
+#if ENABLE_3DCONNEXION_DEVICES_DEBUG_OUTPUT
+    printf("trans packet: ");
+    for (int i = 1; i < 7; i++) {
+        printf("0x%.2X ",packet[i]);
+    }
+    printf("\n");
+#endif // ENABLE_3DCONNEXION_DEVICES_DEBUG_OUTPUT
     double deadzone = m_state.get_translation_deadzone();
     Vec3d translation(-convert_input(packet[1], packet[2], deadzone),
         convert_input(packet[3], packet[4], deadzone),
@@ -892,6 +899,13 @@ bool Mouse3DController::handle_packet_translation(const DataPacket& packet)
 
 bool Mouse3DController::handle_packet_rotation(const DataPacket& packet, unsigned int first_byte)
 {
+#if ENABLE_3DCONNEXION_DEVICES_DEBUG_OUTPUT
+    printf("rot   packet: ");
+    for (int i = first_byte; i < first_byte + 6; i++) {
+        printf("0x%.2X ",packet[i]);
+    }
+    printf("\n");
+#endif // ENABLE_3DCONNEXION_DEVICES_DEBUG_OUTPUT
     double deadzone = (double)m_state.get_rotation_deadzone();
     Vec3f rotation(-(float)convert_input(packet[first_byte + 0], packet[first_byte + 1], deadzone),
         (float)convert_input(packet[first_byte + 2], packet[first_byte + 3], deadzone),
