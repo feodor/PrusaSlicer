@@ -6,7 +6,9 @@
 
 #include <array>
 
+#include <boost/log/trivial.hpp>
 #include <cstdio>
+
 
 static Slic3r::GUI::Mouse3DController* mouse_3d_controller = NULL;
 
@@ -151,7 +153,7 @@ static void DeviceAdded(uint32_t unused)
 #if ENABLE_3DCONNEXION_DEVICES_DEBUG_OUTPUT
     std::cout<<"3D device added"<<std::endl;
 #endif
-
+  BOOST_LOG_TRIVIAL(error)<<"3dx device added";
   // determine exactly which device is plugged in
   int32_t result;
   ConnexionClientControl(clientID, kConnexionCtlGetDeviceID, 0, &result);
@@ -174,7 +176,7 @@ static void DeviceRemoved(uint32_t unused)
 static void DeviceEvent(uint32_t unused, uint32_t msg_type, void *msg_arg)
 {
   //std::cout<<"DEVICE EVENT"<<std::endl;
-  
+  BOOST_LOG_TRIVIAL(error)<<"3dx device event";
   if (msg_type == kConnexionMsgDeviceState) {
   //if(msg_type != 862212163){
     ConnexionDeviceState *s = (ConnexionDeviceState *)msg_arg;
@@ -187,7 +189,7 @@ static void DeviceEvent(uint32_t unused, uint32_t msg_type, void *msg_arg)
       switch (s->command) {
         case kConnexionCmdHandleAxis: {
             
-           std::array<unsigned char, 13> dataPacket = {{(unsigned char)0,
+           std::array<unsigned char, 13> dataPacket = {{(unsigned char)1,
            (unsigned char)(s->axis[0] & 0xFFFF) , (unsigned char)(s->axis[0] & 0xFFFF0000),
            (unsigned char)(s->axis[1] & 0xFFFF) , (unsigned char)(s->axis[1] & 0xFFFF0000),
            (unsigned char)(s->axis[2] & 0xFFFF) , (unsigned char)(s->axis[2] & 0xFFFF0000),
@@ -197,7 +199,8 @@ static void DeviceEvent(uint32_t unused, uint32_t msg_type, void *msg_arg)
 
             for (int i = 0; i < 6; i++) {
                 //std::cout<<i<<":"<<std::hex<<dataPacket[i]<<", ";
-                std::cout<<i<<":"<<s->axis[i]<<", ";
+                //std::cout<<i<<":"<<s->axis[i]<<", ";
+                BOOST_LOG_TRIVIAL(error)<<i<<":"<<s->axis[i];
                 //printf("0x%.8X ",s->axis[i]);
             }
             std::cout<<std::endl;
