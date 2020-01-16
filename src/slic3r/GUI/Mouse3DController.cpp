@@ -554,7 +554,7 @@ bool Mouse3DController::connect_device()
     {
         if (device.second.size() == 1)
         {
-#if defined(__linux__)// || defined(__APPLE__)
+#if defined(__linux__)
             hid_device* test_device = hid_open(device.first.first, device.first.second, nullptr);
             if (test_device != nullptr)
             {
@@ -579,28 +579,22 @@ bool Mouse3DController::connect_device()
 #if ENABLE_3DCONNEXION_DEVICES_DEBUG_OUTPUT
                 std::cout << "Test device: " << std::hex << device.first.first << std::dec << "/" << std::hex << device.first.second << std::dec << " \"" << data.path << "\"";
 #endif // ENABLE_3DCONNEXION_DEVICES_DEBUG_OUTPUT
-#ifdef __APPLE__
-                if(data.usage != 1)
+
+#ifdef __linux__
+                hid_device* test_device = hid_open_path(data.path.c_str());
+                if (test_device != nullptr)
                 {
-#endif//__APPLE__
-#if defined(__linux__) || defined(__APPLE__)
-                    hid_device* test_device = hid_open_path(data.path.c_str());
-                    if (test_device != nullptr)
-                    {
-                        path = data.path;
-                        vendor_id = device.first.first;
-                        product_id = device.first.second;
-                        found = true;
+                    path = data.path;
+                    vendor_id = device.first.first;
+                    product_id = device.first.second;
+                    found = true;
 #if ENABLE_3DCONNEXION_DEVICES_DEBUG_OUTPUT
-                        std::cout << "-> PASSED" << std::endl;
+                    std::cout << "-> PASSED" << std::endl;
 #endif // ENABLE_3DCONNEXION_DEVICES_DEBUG_OUTPUT
-                        hid_close(test_device);
-                        break;
-                    }
-#ifdef __APPLE__
+                    hid_close(test_device);
+                    break;
                 }
-#endif//__APPLE__
-#else // !(__linux__ || __APPLE__)
+#else // !__linux__
                 if (data.has_valid_usage())
                 {
                     path = data.path;
@@ -612,7 +606,7 @@ bool Mouse3DController::connect_device()
 #endif // ENABLE_3DCONNEXION_DEVICES_DEBUG_OUTPUT
                     break;
                 }
-#endif // __linux__ || __APPLE__
+#endif // __linux__
 #if ENABLE_3DCONNEXION_DEVICES_DEBUG_OUTPUT
                 else
                     std::cout << "-> NOT PASSED" << std::endl;
@@ -767,8 +761,8 @@ void Mouse3DController::handle_input_axis(const DataPacketAxis& packet)
     //translation
     double deadzone = m_state.get_translation_deadzone();
     Vec3d translation(std::abs(packet[0]) > deadzone ? -packet[0] : 0.0,
-                      std::abs(packet[1]) > deadzone ? packet[1] : 0.0,
-                      std::abs(packet[2]) > deadzone ? packet[2] : 0.0);
+                      std::abs(packet[1]) > deadzone ?  packet[1] : 0.0,
+                      std::abs(packet[2]) > deadzone ?  packet[2] : 0.0);
     if (!translation.isApprox(Vec3d::Zero()))
     {
         m_state.append_translation(translation);
@@ -777,7 +771,7 @@ void Mouse3DController::handle_input_axis(const DataPacketAxis& packet)
     //rotation
     deadzone = m_state.get_rotation_deadzone();
     Vec3f rotation(std::abs(packet[3]) > deadzone ? -(float)packet[3] : 0.0,
-                   std::abs(packet[4]) > deadzone ? (float)packet[4] : 0.0,
+                   std::abs(packet[4]) > deadzone ?  (float)packet[4] : 0.0,
                    std::abs(packet[5]) > deadzone ? -(float)packet[5] : 0.0);
     if (!rotation.isApprox(Vec3f::Zero()))
     {
@@ -912,14 +906,6 @@ double convert_input(unsigned char first, unsigned char second, double deadzone)
 
 bool Mouse3DController::handle_packet_translation(const DataPacketRaw& packet)
 {
-#if ENABLE_3DCONNEXION_DEVICES_DEBUG_OUTPUT
-    printf("trans packet: ");
-    for (int i = 1; i < 7; i++) {
-        //printf("0x%.2X ",packet[i]);
-        printf("%d ",packet[i]);
-    }
-    printf("\n");
-#endif // ENABLE_3DCONNEXION_DEVICES_DEBUG_OUTPUT
     double deadzone = m_state.get_translation_deadzone();
     Vec3d translation(-convert_input(packet[1], packet[2], deadzone),
         convert_input(packet[3], packet[4], deadzone),
@@ -936,14 +922,6 @@ bool Mouse3DController::handle_packet_translation(const DataPacketRaw& packet)
 
 bool Mouse3DController::handle_packet_rotation(const DataPacketRaw& packet, unsigned int first_byte)
 {
-#if ENABLE_3DCONNEXION_DEVICES_DEBUG_OUTPUT
-    printf("rot   packet: ");
-    for (int i = first_byte; i < first_byte + 6; i++) {
-        //printf("0x%.2X ",packet[i]);
-        printf("%d ",packet[i]);
-    }
-    printf("\n");
-#endif // ENABLE_3DCONNEXION_DEVICES_DEBUG_OUTPUT
     double deadzone = (double)m_state.get_rotation_deadzone();
     Vec3f rotation(-(float)convert_input(packet[first_byte + 0], packet[first_byte + 1], deadzone),
         (float)convert_input(packet[first_byte + 2], packet[first_byte + 3], deadzone),
