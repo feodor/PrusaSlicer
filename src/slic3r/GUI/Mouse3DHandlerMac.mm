@@ -79,14 +79,15 @@ static void *load_func(void *module, const char *func_name)
 {
   void *func = dlsym(module, func_name);
 
-#if ENABLE_3DCONNEXION_DEVICES_DEBUG_OUTPUT
+//#if ENABLE_3DCONNEXION_DEVICES_DEBUG_OUTPUT
   if (func) {
-    printf("'%s' loaded\n", func_name);
+      BOOST_LOG_TRIVIAL(info) << func_name <<" loaded";
   }
   else {
     printf("<!> %s\n", dlerror());
+      BOOST_LOG_TRIVIAL(info) << dlerror();
   }
-#endif
+//#endif
 
   return func;
 }
@@ -133,7 +134,7 @@ static bool load_driver_functions()
   printf("loaded: %s\n", driver_loaded ? "YES" : "NO");
   printf("new: %s\n", has_new_driver ? "YES" : "NO");
 #endif
-
+    BOOST_LOG_TRIVIAL(info) << "3dx drivers loaded: "<< driver_loaded ? "YES" : "NO" ;
   return driver_loaded;
 }
 
@@ -147,7 +148,7 @@ static void DeviceAdded(uint32_t unused)
 #if ENABLE_3DCONNEXION_DEVICES_DEBUG_OUTPUT
     std::cout<<"3D device added"<<std::endl;
 #endif
-  BOOST_LOG_TRIVIAL(error)<<"3dx device added";
+  BOOST_LOG_TRIVIAL(info)<<"3dx device added";
   // determine exactly which device is plugged in
   int32_t result;
   ConnexionClientControl(clientID, kConnexionCtlGetDeviceID, 0, &result);
@@ -165,6 +166,7 @@ static void DeviceRemoved(uint32_t unused)
 #if ENABLE_3DCONNEXION_DEVICES_DEBUG_OUTPUT
   printf("3d device removed\n");
 #endif
+  BOOST_LOG_TRIVIAL(info) << "3dx device removed\n";
   mouse_3d_controller->set_mac_mouse_connected(true);
 }
 
@@ -204,6 +206,7 @@ namespace Slic3r {
 namespace GUI {
 Mouse3DHandlerMac::Mouse3DHandlerMac(Mouse3DController* controller)
 {
+   BOOST_LOG_TRIVIAL(info) << "3dx mac handler starts";
   if (load_driver_functions()) {
     mouse_3d_controller = controller;
 
@@ -225,8 +228,8 @@ Mouse3DHandlerMac::Mouse3DHandlerMac(Mouse3DController* controller)
     // set_target_properties(PrusaSlicer PROPERTIES OUTPUT_NAME "prusa-slicer")
     
     clientID = RegisterConnexionClient(
-        0, "\017PrusaSlicer.app", kConnexionClientModeTakeOver, kConnexionMaskAxis);
-
+        0, "\013PrusaSlicer", kConnexionClientModeTakeOver, kConnexionMaskAxis);
+      BOOST_LOG_TRIVIAL(info) << "3dx mac handler registered";
   }
 }
 
