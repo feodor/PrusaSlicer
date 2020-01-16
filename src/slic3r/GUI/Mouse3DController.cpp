@@ -751,6 +751,7 @@ void Mouse3DController::collect_input()
         stop();
         return;
     }
+	handle_input(packet, res);
 }
     
 void Mouse3DController::handle_input_axis(const DataPacketAxis& packet)
