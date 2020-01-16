@@ -15,10 +15,7 @@ static Slic3r::GUI::Mouse3DController* mouse_3d_controller = NULL;
 static uint16_t clientID = 0;
 
 static bool driver_loaded = false;
-static bool has_old_driver =
-    false;  // 3Dconnexion drivers before 10 beta 4 are "old", not all buttons will work
-static bool has_new_driver =
-    false;  // drivers >= 10.2.2 are "new", and can process events on a separate thread
+static bool has_new_driver = false;  // drivers >= 10.2.2 are "new", and can process events on a separate thread
 
 // replicate just enough of the 3Dx API for our uses, not everything the driver provides
 
@@ -126,8 +123,6 @@ static bool load_driver_functions()
       LOAD_FUNC(SetConnexionClientButtonMask);
       LOAD_FUNC(UnregisterConnexionClient);
       LOAD_FUNC(ConnexionClientControl);
-
-      has_old_driver = (SetConnexionClientButtonMask == NULL);
     }
   }
 #if DENABLE_3DCONNEXION_DEVICES_DEBUG_OUTPUT
@@ -136,7 +131,6 @@ static bool load_driver_functions()
   }
 
   printf("loaded: %s\n", driver_loaded ? "YES" : "NO");
-  printf("old: %s\n", has_old_driver ? "YES" : "NO");
   printf("new: %s\n", has_new_driver ? "YES" : "NO");
 #endif
 
@@ -215,8 +209,7 @@ Mouse3DHandlerMac::Mouse3DHandlerMac(Mouse3DController* controller)
 
     uint16_t error;
     if (has_new_driver) {
-      const bool separate_thread = false;  // TODO: rework Mac event handler to allow this
-      error = SetConnexionHandlers(DeviceEvent, DeviceAdded, DeviceRemoved, separate_thread);
+      error = SetConnexionHandlers(DeviceEvent, DeviceAdded, DeviceRemoved, false);
     }
     else {
       error = InstallConnexionHandlers(DeviceEvent, DeviceAdded, DeviceRemoved);
@@ -226,7 +219,11 @@ Mouse3DHandlerMac::Mouse3DHandlerMac(Mouse3DController* controller)
       return;
     }
 
-    // Registration is done either by 4letter constant (CFBundleSignature - obsolete and we dont have that) or Executable name in pascal string(first byte is string lenght). If no packets are recieved the name might be different - check cmake.
+    // Registration is done either by 4letter constant (CFBundleSignature - obsolete
+    //and we dont have that) or Executable name in pascal string(first byte is string lenght).
+    //If no packets are recieved the name might be different - check cmake. If debugging try commenting
+    // set_target_properties(PrusaSlicer PROPERTIES OUTPUT_NAME "prusa-slicer")
+    
     clientID = RegisterConnexionClient(
         0, "\013PrusaSlicer", kConnexionClientModeTakeOver, kConnexionMaskAxis);
 
