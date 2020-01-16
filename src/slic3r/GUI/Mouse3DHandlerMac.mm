@@ -225,7 +225,7 @@ Mouse3DHandlerMac::Mouse3DHandlerMac(Mouse3DController* controller)
     // set_target_properties(PrusaSlicer PROPERTIES OUTPUT_NAME "prusa-slicer")
     
     clientID = RegisterConnexionClient(
-        0, "\013PrusaSlicer", kConnexionClientModeTakeOver, kConnexionMaskAxis);
+        0, "\017PrusaSlicer.app", kConnexionClientModeTakeOver, kConnexionMaskAxis);
 
   }
 }
