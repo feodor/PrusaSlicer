@@ -32,7 +32,7 @@ static bool has_new_driver =
 #define kConnexionMsgDeviceState '3dSR'
 #define kConnexionCtlGetDeviceID '3did'
 
-#pragma pack(push, 2)  // just this struct
+#pragma pack(push, 2)
 struct ConnexionDeviceState {
   uint16_t version;
   uint16_t client;
@@ -162,8 +162,8 @@ static void DeviceAdded(uint32_t unused)
 
   //TODO: verify device
 
-
-  //ndof_manager->setDevice(vendorID, productID);
+    
+  mouse_3d_controller->set_mac_mouse_connected(true);
 }
 
 static void DeviceRemoved(uint32_t unused)
@@ -171,45 +171,25 @@ static void DeviceRemoved(uint32_t unused)
 #if ENABLE_3DCONNEXION_DEVICES_DEBUG_OUTPUT
   printf("3d device removed\n");
 #endif
+  mouse_3d_controller->set_mac_mouse_connected(true);
 }
 
 static void DeviceEvent(uint32_t unused, uint32_t msg_type, void *msg_arg)
 {
-  //std::cout<<"DEVICE EVENT"<<std::endl;
-  //BOOST_LOG_TRIVIAL(error)<<"3dx device event";
   if (msg_type == kConnexionMsgDeviceState) {
-  //if(msg_type != 862212163){
     ConnexionDeviceState *s = (ConnexionDeviceState *)msg_arg;
-
-    // device state is broadcast to all clients; only react if sent to us
-    //if (s->client == clientID) {
-      // TODO: is s->time compatible with GHOST timestamps? if so use that instead.
-      //GHOST_TUns64 now = ghost_system->getMilliSeconds();
-
+    if (s->client == clientID) {
       switch (s->command) {
         case kConnexionCmdHandleAxis: {
             /*
              The axis field is an array of 6 signed 16-bit integers corresponding to the 6 device axes. Data is ordered as Tx, Tz, Ty, Rx, Rz, Ry. The values reported are scaled by the driver according to the speed slider settings on the 3Dconnexion preference panel. At maximum speed, the range is - 1024 to 1024. Typical range that you should optimize your application for should be -500 to 500.
              */
-           std::array<unsigned char, 13> dataPacket = {{(unsigned char)1,
-           (unsigned char)(s->axis[0] & 0xFF) , (unsigned char)(s->axis[0] & 0xFF00),
-           (unsigned char)(s->axis[1] & 0xFF) , (unsigned char)(s->axis[1] & 0xFF00),
-           (unsigned char)(s->axis[2] & 0xFF) , (unsigned char)(s->axis[2] & 0xFF00),
-           (unsigned char)(s->axis[3] & 0xFF) , (unsigned char)(s->axis[3] & 0xFF00),
-           (unsigned char)(s->axis[4] & 0xFF) , (unsigned char)(s->axis[4] & 0xFF00),
-           (unsigned char)(s->axis[5] & 0xFF) , (unsigned char)(s->axis[5] & 0xFF00)}};
-
-            
-            for (int i = 0; i < 6; i++) {
-                //std::cout<<i<<":"<<std::hex<<dataPacket[i]<<", ";
-                //std::cout<<i<<":"<<s->axis[i]<<", ";
-                //BOOST_LOG_TRIVIAL(error)<<i<<":"<<s->axis[i];
-                printf("0x%.8X ",s->axis[i]);
-            }
-            std::cout<<std::endl;
-           
-            
-           mouse_3d_controller->handle_input(dataPacket, 13);
+            //Actually we are getting values way over 1024. Max is probably 2048 now.
+          std::array<double, 6> packet;
+          for (int i = 0; i < 6; i++) {
+              packet[i] = (double)s->axis[i]/350.0;//wanted to divide by 500 but 350 is used at raw input so i used same value.
+          }
+          mouse_3d_controller->handle_input_axis(packet);
 
           
           break;
@@ -221,7 +201,7 @@ static void DeviceEvent(uint32_t unused, uint32_t msg_type, void *msg_arg)
         default:
         break;
       }
-    //}
+    }
   }
   
 }
@@ -246,13 +226,10 @@ Mouse3DHandlerMac::Mouse3DHandlerMac(Mouse3DController* controller)
       return;
     }
 
-    // Pascal string *and* a four-letter constant. How old-skool.
+    // Registration is done either by 4letter constant (CFBundleSignature - obsolete and we dont have that) or Executable name in pascal string(first byte is string lenght). If no packets are recieved the name might be different - check cmake.
     clientID = RegisterConnexionClient(
         0, "\013PrusaSlicer", kConnexionClientModeTakeOver, kConnexionMaskAxis);
 
-    //if (!has_old_driver) {
-    //  SetConnexionClientButtonMask(clientID, kConnexionMaskAllButtons);
-    //}
   }
 }
 
