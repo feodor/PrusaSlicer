@@ -85,7 +85,7 @@ static void *load_func(void *module, const char *func_name)
   }
   else {
     printf("<!> %s\n", dlerror());
-      BOOST_LOG_TRIVIAL(info) << dlerror();
+    BOOST_LOG_TRIVIAL(error) <<"loading 3dx drivers dlsym error: "<< dlerror();
   }
 //#endif
 
@@ -106,6 +106,7 @@ static bool load_driver_functions()
                   RTLD_LAZY | RTLD_LOCAL);
 
   if (module) {
+    BOOST_LOG_TRIVIAL(info) << "loading 3dx drivers";
     LOAD_FUNC(SetConnexionHandlers);
 
     if (SetConnexionHandlers != NULL) {
@@ -113,6 +114,7 @@ static bool load_driver_functions()
       has_new_driver = true;
     }
     else {
+        BOOST_LOG_TRIVIAL(info) << "installing 3dx drivers";
       LOAD_FUNC(InstallConnexionHandlers);
 
       driver_loaded = (InstallConnexionHandlers != NULL);
