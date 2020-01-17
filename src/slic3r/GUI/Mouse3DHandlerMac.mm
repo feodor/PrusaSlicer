@@ -84,7 +84,7 @@ static void *load_func(void *module, const char *func_name)
       BOOST_LOG_TRIVIAL(info) << func_name <<" loaded";
   }
   else {
-    printf("<!> %s\n", dlerror());
+    //printf("<!> %s\n", dlerror());
     BOOST_LOG_TRIVIAL(error) <<"loading 3dx drivers dlsym error: "<< dlerror();
   }
 //#endif
@@ -131,7 +131,6 @@ static bool load_driver_functions()
  else {
     BOOST_LOG_TRIVIAL(error) << "3dx drivers module loading error: "<< dlerror() ;
 #if DENABLE_3DCONNEXION_DEVICES_DEBUG_OUTPUT
- 
     printf("<!> %s\n", dlerror());
 #endif
   }
