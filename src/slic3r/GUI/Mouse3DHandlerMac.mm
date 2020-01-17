@@ -128,11 +128,14 @@ static bool load_driver_functions()
       LOAD_FUNC(ConnexionClientControl);
     }
   }
+ else {
+    BOOST_LOG_TRIVIAL(error) << "3dx drivers module loading error: "<< dlerror() ;
 #if DENABLE_3DCONNEXION_DEVICES_DEBUG_OUTPUT
-  else {
+ 
     printf("<!> %s\n", dlerror());
+#endif
   }
-
+#if DENABLE_3DCONNEXION_DEVICES_DEBUG_OUTPUT
   printf("loaded: %s\n", driver_loaded ? "YES" : "NO");
   printf("new: %s\n", has_new_driver ? "YES" : "NO");
 #endif
