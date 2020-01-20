@@ -241,6 +241,8 @@ public:
     GLCanvas3D* canvas3D();
     BoundingBoxf bed_shape_bb() const;
 
+    void set_current_canvas_as_dirty();
+
     PrinterTechnology   printer_technology() const;
     void                set_printer_technology(PrinterTechnology printer_technology);
 
@@ -265,9 +267,7 @@ public:
 
     void msw_rescale();
 
-#if ENABLE_VIEW_TOOLBAR_BACKGROUND_FIX
     bool init_view_toolbar();
-#endif // ENABLE_VIEW_TOOLBAR_BACKGROUND_FIX
 
     const Camera& get_camera() const;
     const Mouse3DController& get_mouse3d_controller() const;

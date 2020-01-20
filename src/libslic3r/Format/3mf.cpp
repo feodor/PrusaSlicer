@@ -87,6 +87,7 @@ const char* V3_ATTR = "v3";
 const char* OBJECTID_ATTR = "objectid";
 const char* TRANSFORM_ATTR = "transform";
 const char* PRINTABLE_ATTR = "printable";
+const char* INSTANCESCOUNT_ATTR = "instances_count";
 
 const char* KEY_ATTR = "key";
 const char* VALUE_ATTR = "value";
@@ -715,8 +716,8 @@ namespace Slic3r {
                 return false;
         }
 
-        // fixes the min z of the model if negative
-        model.adjust_min_z();
+//        // fixes the min z of the model if negative
+//        model.adjust_min_z();
 
         return true;
     }
@@ -1087,7 +1088,7 @@ namespace Slic3r {
                 return;
             pt::ptree code_tree = main_tree.front().second;
 
-            m_model->custom_gcode_per_print_z.clear();
+            m_model->custom_gcode_per_print_z.gcodes.clear();
 
             for (const auto& code : code_tree)
             {
@@ -1099,7 +1100,7 @@ namespace Slic3r {
                 int extruder        = tree.get<int>         ("<xmlattr>.extruder"   );
                 std::string color   = tree.get<std::string> ("<xmlattr>.color"      );
 
-                m_model->custom_gcode_per_print_z.push_back(Model::CustomGCode{print_z, gcode, extruder, color}) ;
+                m_model->custom_gcode_per_print_z.gcodes.push_back(Model::CustomGCode{print_z, gcode, extruder, color}) ;
             }
         }
     }
@@ -1613,6 +1614,9 @@ namespace Slic3r {
             return false;
         }
 
+        // Added because of github #3435, currently not used by PrusaSlicer
+        int instances_count_id = get_attribute_value_int(attributes, num_attributes, INSTANCESCOUNT_ATTR);
+
         m_objects_metadata.insert(IdToMetadataMap::value_type(object_id, ObjectMetadata()));
         m_curr_config.object_id = object_id;
         return true;
@@ -1713,9 +1717,6 @@ namespace Slic3r {
                     break;
                 }
             }
-#if !ENABLE_KEEP_LOADED_VOLUME_TRANSFORM_AS_STAND_ALONE
-            Transform3d inv_matrix = volume_matrix_to_object.inverse();
-#endif // !ENABLE_KEEP_LOADED_VOLUME_TRANSFORM_AS_STAND_ALONE
 
             // splits volume out of imported geometry
 			TriangleMesh triangle_mesh;
@@ -1735,15 +1736,7 @@ namespace Slic3r {
                 for (unsigned int v = 0; v < 3; ++v)
                 {
                     unsigned int tri_id = geometry.triangles[src_start_id + ii + v] * 3;
-#if ENABLE_KEEP_LOADED_VOLUME_TRANSFORM_AS_STAND_ALONE
                     facet.vertex[v] = Vec3f(geometry.vertices[tri_id + 0], geometry.vertices[tri_id + 1], geometry.vertices[tri_id + 2]);
-#else
-                    Vec3f vertex(geometry.vertices[tri_id + 0], geometry.vertices[tri_id + 1], geometry.vertices[tri_id + 2]);
-                    facet.vertex[v] = has_transform ?
-                        // revert the vertices to the original mesh reference system
-                        (inv_matrix * vertex.cast<double>()).cast<float>() :
-                        vertex;
-#endif // ENABLE_KEEP_LOADED_VOLUME_TRANSFORM_AS_STAND_ALONE
                 }
             }
 
@@ -1751,15 +1744,9 @@ namespace Slic3r {
 			triangle_mesh.repair();
 
 			ModelVolume* volume = object.add_volume(std::move(triangle_mesh));
-#if ENABLE_KEEP_LOADED_VOLUME_TRANSFORM_AS_STAND_ALONE
             // stores the volume matrix taken from the metadata, if present
             if (has_transform)
                 volume->source.transform = Slic3r::Geometry::Transformation(volume_matrix_to_object);
-#else
-            // apply the volume matrix taken from the metadata, if present
-            if (has_transform)
-                volume->set_transformation(Slic3r::Geometry::Transformation(volume_matrix_to_object));
-#endif //ENABLE_KEEP_LOADED_VOLUME_TRANSFORM_AS_STAND_ALONE
             volume->calculate_convex_hull();
 
             // apply the remaining volume's metadata
@@ -1872,12 +1859,24 @@ namespace Slic3r {
         typedef std::vector<BuildItem> BuildItemsList;
         typedef std::map<int, ObjectData> IdToObjectDataMap;
 
+#if ENABLE_CONFIGURABLE_PATHS_EXPORT_TO_3MF_AND_AMF
+        bool m_fullpath_sources{ true };
+#endif // ENABLE_CONFIGURABLE_PATHS_EXPORT_TO_3MF_AND_AMF
+
     public:
+#if ENABLE_CONFIGURABLE_PATHS_EXPORT_TO_3MF_AND_AMF
+#if ENABLE_THUMBNAIL_GENERATOR
+        bool save_model_to_file(const std::string& filename, Model& model, const DynamicPrintConfig* config, bool fullpath_sources, const ThumbnailData* thumbnail_data = nullptr);
+#else
+        bool save_model_to_file(const std::string& filename, Model& model, const DynamicPrintConfig* config, bool fullpath_sources);
+#endif // ENABLE_THUMBNAIL_GENERATOR
+#else
 #if ENABLE_THUMBNAIL_GENERATOR
         bool save_model_to_file(const std::string& filename, Model& model, const DynamicPrintConfig* config, const ThumbnailData* thumbnail_data = nullptr);
 #else
         bool save_model_to_file(const std::string& filename, Model& model, const DynamicPrintConfig* config);
 #endif // ENABLE_THUMBNAIL_GENERATOR
+#endif // ENABLE_CONFIGURABLE_PATHS_EXPORT_TO_3MF_AND_AMF
 
     private:
 #if ENABLE_THUMBNAIL_GENERATOR
@@ -1902,6 +1901,22 @@ namespace Slic3r {
         bool _add_custom_gcode_per_print_z_file_to_archive(mz_zip_archive& archive, Model& model);
     };
 
+#if ENABLE_CONFIGURABLE_PATHS_EXPORT_TO_3MF_AND_AMF
+#if ENABLE_THUMBNAIL_GENERATOR
+    bool _3MF_Exporter::save_model_to_file(const std::string& filename, Model& model, const DynamicPrintConfig* config, bool fullpath_sources, const ThumbnailData* thumbnail_data)
+    {
+        clear_errors();
+        m_fullpath_sources = fullpath_sources;
+        return _save_model_to_file(filename, model, config, thumbnail_data);
+    }
+#else
+    bool _3MF_Exporter::save_model_to_file(const std::string& filename, Model& model, const DynamicPrintConfig* config, bool fullpath_sources)
+    {
+        clear_errors();
+        return _save_model_to_file(filename, model, config);
+    }
+#endif // ENABLE_THUMBNAIL_GENERATOR
+#else
 #if ENABLE_THUMBNAIL_GENERATOR
     bool _3MF_Exporter::save_model_to_file(const std::string& filename, Model& model, const DynamicPrintConfig* config, const ThumbnailData* thumbnail_data)
     {
@@ -1915,6 +1930,7 @@ namespace Slic3r {
         return _save_model_to_file(filename, model, config);
     }
 #endif // ENABLE_THUMBNAIL_GENERATOR
+#endif // ENABLE_CONFIGURABLE_PATHS_EXPORT_TO_3MF_AND_AMF
 
 #if ENABLE_THUMBNAIL_GENERATOR
     bool _3MF_Exporter::_save_model_to_file(const std::string& filename, Model& model, const DynamicPrintConfig* config, const ThumbnailData* thumbnail_data)
@@ -2495,7 +2511,8 @@ namespace Slic3r {
             const ModelObject* obj = obj_metadata.second.object;
             if (obj != nullptr)
             {
-                stream << " <" << OBJECT_TAG << " id=\"" << obj_metadata.first << "\">\n";
+                // Output of instances count added because of github #3435, currently not used by PrusaSlicer
+                stream << " <" << OBJECT_TAG << " " << ID_ATTR << "=\"" << obj_metadata.first << "\" " << INSTANCESCOUNT_ATTR << "=\"" << obj->instances.size() << "\">\n";
 
                 // stores object's name
                 if (!obj->name.empty())
@@ -2533,11 +2550,7 @@ namespace Slic3r {
 
                             // stores volume's local matrix
                             stream << "   <" << METADATA_TAG << " " << TYPE_ATTR << "=\"" << VOLUME_TYPE << "\" " << KEY_ATTR << "=\"" << MATRIX_KEY << "\" " << VALUE_ATTR << "=\"";
-#if ENABLE_KEEP_LOADED_VOLUME_TRANSFORM_AS_STAND_ALONE
                             Transform3d matrix = volume->get_matrix() * volume->source.transform.get_matrix();
-#else
-                            const Transform3d& matrix = volume->get_matrix();
-#endif // ENABLE_KEEP_LOADED_VOLUME_TRANSFORM_AS_STAND_ALONE
                             for (int r = 0; r < 4; ++r)
                             {
                                 for (int c = 0; c < 4; ++c)
@@ -2552,7 +2565,12 @@ namespace Slic3r {
                             // stores volume's source data
                             if (!volume->source.input_file.empty())
                             {
+#if ENABLE_CONFIGURABLE_PATHS_EXPORT_TO_3MF_AND_AMF
+                                std::string input_file = xml_escape(m_fullpath_sources ? volume->source.input_file : boost::filesystem::path(volume->source.input_file).filename().string());
+                                stream << "   <" << METADATA_TAG << " " << TYPE_ATTR << "=\"" << VOLUME_TYPE << "\" " << KEY_ATTR << "=\"" << SOURCE_FILE_KEY << "\" " << VALUE_ATTR << "=\"" << input_file << "\"/>\n";
+#else
                                 stream << "   <" << METADATA_TAG << " " << TYPE_ATTR << "=\"" << VOLUME_TYPE << "\" " << KEY_ATTR << "=\"" << SOURCE_FILE_KEY << "\" " << VALUE_ATTR << "=\"" << xml_escape(volume->source.input_file) << "\"/>\n";
+#endif // ENABLE_CONFIGURABLE_PATHS_EXPORT_TO_3MF_AND_AMF
                                 stream << "   <" << METADATA_TAG << " " << TYPE_ATTR << "=\"" << VOLUME_TYPE << "\" " << KEY_ATTR << "=\"" << SOURCE_OBJECT_ID_KEY << "\" " << VALUE_ATTR << "=\"" << volume->source.object_idx << "\"/>\n";
                                 stream << "   <" << METADATA_TAG << " " << TYPE_ATTR << "=\"" << VOLUME_TYPE << "\" " << KEY_ATTR << "=\"" << SOURCE_VOLUME_ID_KEY << "\" " << VALUE_ATTR << "=\"" << volume->source.volume_idx << "\"/>\n";
                                 stream << "   <" << METADATA_TAG << " " << TYPE_ATTR << "=\"" << VOLUME_TYPE << "\" " << KEY_ATTR << "=\"" << SOURCE_OFFSET_X_KEY << "\" " << VALUE_ATTR << "=\"" << volume->source.mesh_offset(0) << "\"/>\n";
@@ -2592,12 +2610,12 @@ bool _3MF_Exporter::_add_custom_gcode_per_print_z_file_to_archive( mz_zip_archiv
 {
     std::string out = "";
 
-    if (!model.custom_gcode_per_print_z.empty())
+    if (!model.custom_gcode_per_print_z.gcodes.empty())
     {
         pt::ptree tree;
         pt::ptree& main_tree = tree.add("custom_gcodes_per_print_z", "");
 
-        for (const Model::CustomGCode& code : model.custom_gcode_per_print_z)
+        for (const Model::CustomGCode& code : model.custom_gcode_per_print_z.gcodes)
         {
             pt::ptree& code_tree = main_tree.add("code", "");
             // store minX and maxZ
@@ -2641,21 +2659,37 @@ bool load_3mf(const char* path, DynamicPrintConfig* config, Model* model, bool c
         return res;
     }
 
+#if ENABLE_CONFIGURABLE_PATHS_EXPORT_TO_3MF_AND_AMF
+#if ENABLE_THUMBNAIL_GENERATOR
+bool store_3mf(const char* path, Model* model, const DynamicPrintConfig* config, bool fullpath_sources, const ThumbnailData* thumbnail_data)
+#else
+bool store_3mf(const char* path, Model* model, const DynamicPrintConfig* config, bool fullpath_sources)
+#endif // ENABLE_THUMBNAIL_GENERATOR
+#else
 #if ENABLE_THUMBNAIL_GENERATOR
     bool store_3mf(const char* path, Model* model, const DynamicPrintConfig* config, const ThumbnailData* thumbnail_data)
 #else
     bool store_3mf(const char* path, Model* model, const DynamicPrintConfig* config)
 #endif // ENABLE_THUMBNAIL_GENERATOR
+#endif // ENABLE_CONFIGURABLE_PATHS_EXPORT_TO_3MF_AND_AMF
     {
         if ((path == nullptr) || (model == nullptr))
             return false;
 
         _3MF_Exporter exporter;
+#if ENABLE_CONFIGURABLE_PATHS_EXPORT_TO_3MF_AND_AMF
+#if ENABLE_THUMBNAIL_GENERATOR
+        bool res = exporter.save_model_to_file(path, *model, config, fullpath_sources, thumbnail_data);
+#else
+        bool res = exporter.save_model_to_file(path, *model, config, fullpath_sources);
+#endif // ENABLE_THUMBNAIL_GENERATOR
+#else
 #if ENABLE_THUMBNAIL_GENERATOR
         bool res = exporter.save_model_to_file(path, *model, config, thumbnail_data);
 #else
         bool res = exporter.save_model_to_file(path, *model, config);
 #endif // ENABLE_THUMBNAIL_GENERATOR
+#endif // ENABLE_CONFIGURABLE_PATHS_EXPORT_TO_3MF_AND_AMF
 
         if (!res)
             exporter.log_errors();
