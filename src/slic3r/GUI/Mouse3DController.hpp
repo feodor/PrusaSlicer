@@ -24,9 +24,7 @@ namespace GUI {
 #endif//__APPLE__
     
 struct Camera;
-#if ENABLE_3DCONNEXION_DEVICES_CLOSE_SETTING_DIALOG
 class GLCanvas3D;
-#endif // ENABLE_3DCONNEXION_DEVICES_CLOSE_SETTING_DIALOG
 
 class Mouse3DController
 {
@@ -74,7 +72,7 @@ class Mouse3DController
         CustomParameters<double> m_translation_params;
         CustomParameters<float> m_rotation_params;
 #if ENABLE_3DCONNEXION_Y_AS_ZOOM
-        CustomParameters<float> m_zoom_params;
+        CustomParameters<double> m_zoom_params;
 #endif // ENABLE_3DCONNEXION_Y_AS_ZOOM
 
         // When the 3Dconnexion driver is running the system gets, by default, mouse wheel events when rotations around the X axis are detected.
@@ -150,13 +148,10 @@ class Mouse3DController
     std::string m_device_str;
     bool m_running;
     bool m_mac_mouse_connected;
-#if ENABLE_3DCONNEXION_DEVICES_CLOSE_SETTING_DIALOG
+    
     mutable bool m_show_settings_dialog;
     // set to true when ther user closes the dialog by clicking on [X] or [Close] buttons
     mutable bool m_settings_dialog_closed_by_user;
-#else
-    bool m_show_settings_dialog;
-#endif // ENABLE_3DCONNEXION_DEVICES_CLOSE_SETTING_DIALOG
     std::chrono::time_point<std::chrono::high_resolution_clock> m_last_time;
 
 public:
@@ -176,11 +171,7 @@ public:
 
     bool is_settings_dialog_shown() const { return m_show_settings_dialog; }
     void show_settings_dialog(bool show) { m_show_settings_dialog = show && is_running(); }
-#if ENABLE_3DCONNEXION_DEVICES_CLOSE_SETTING_DIALOG
     void render_settings_dialog(GLCanvas3D& canvas) const;
-#else
-    void render_settings_dialog(unsigned int canvas_width, unsigned int canvas_height) const;
-#endif // ENABLE_3DCONNEXION_DEVICES_CLOSE_SETTING_DIALOG
 
     typedef std::array<double, 6> DataPacketAxis;
     void handle_input_axis(const DataPacketAxis& packet);

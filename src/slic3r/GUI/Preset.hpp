@@ -61,6 +61,7 @@ public:
         PrinterTechnology           technology;
         std::string                 family;
         std::vector<PrinterVariant> variants;
+        std::vector<std::string>	default_materials;
         // Vendor & Printer Model specific print bed model & texture.
         std::string 			 	bed_model;
         std::string 				bed_texture;
@@ -383,7 +384,8 @@ public:
         size_t n = this->m_presets.size();
         size_t i_compatible = n;
         for (; i < n; ++ i)
-            if (m_presets[i].is_compatible) {
+            // Since we use the filament selection from Wizard, it's needed to control the preset visibility too 
+            if (m_presets[i].is_compatible && m_presets[i].is_visible) {
                 if (prefered_condition(m_presets[i].name))
                     return i;
                 if (i_compatible == n)
@@ -561,6 +563,11 @@ public:
 
     const Preset*   find_by_model_id(const std::string &model_id) const;
 };
+
+namespace PresetUtils {
+	// PrinterModel of a system profile, from which this preset is derived, or null if it is not derived from a system profile.
+	const VendorProfile::PrinterModel* system_printer_model(const Preset &preset);
+} // namespace PresetUtils
 
 } // namespace Slic3r
 
